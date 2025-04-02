@@ -77,63 +77,59 @@ with st.form("mahsulot_form"):
     # O'lcham va miqdorlarni qo'lda kiritish
     st.subheader("O'lcham va miqdorlarni qo'lda kiriting")
     
-    # O'lcham va miqdorlarni dinamik qo'shish
-    olcham_miqdorlar = []
-    
-    # Yangi o'lcham va miqdor qo'shish
-    col1, col2 = st.columns(2)
-    with col1:
-        olcham = st.text_input("O'lcham")
-    with col2:
-        miqdor = st.number_input("Miqdor", min_value=0)
-    
-    if st.button("O'lcham/miqdorni qo'shish", key="add_size"):
-        if olcham and miqdor > 0:
-            st.session_state.olcham_miqdorlar.append({"olcham": olcham, "miqdor": miqdor})
-            st.success(f"Qo'shildi: O'lcham {olcham}, Miqdor {miqdor}")
-        else:
-            st.warning("O'lcham kiriting va miqdor 0 dan katta bo'lishi kerak!")
-    
     # Joriy o'lcham/miqdorlarni ko'rsatish
     if st.session_state.olcham_miqdorlar:
         st.write("Joriy o'lcham va miqdorlar:")
         for i, item in enumerate(st.session_state.olcham_miqdorlar):
             st.write(f"{i+1}. O'lcham: {item['olcham']}, Miqdor: {item['miqdor']}ta")
     
-    # O'lcham/miqdorlar ro'yxatini tozalash
-    if st.button("O'lcham/miqdorlar ro'yxatini tozalash", key="clear_sizes"):
-        st.session_state.olcham_miqdorlar = []
-        st.success("O'lcham/miqdorlar ro'yxati tozalandi")
+    # Yangi o'lcham va miqdor kiritish
+    col1, col2 = st.columns(2)
+    with col1:
+        olcham = st.text_input("O'lcham", key="olcham_input")
+    with col2:
+        miqdor = st.number_input("Miqdor", min_value=0, key="miqdor_input")
     
-    # Yuborish tugmasi
+    # Form submit tugmasi
     submitted = st.form_submit_button("Saqlash")
+
+# O'lcham/miqdorni qo'shish (formadan tashqarida)
+if olcham and miqdor > 0:
+    if st.button("O'lcham/miqdorni qo'shish"):
+        st.session_state.olcham_miqdorlar.append({"olcham": olcham, "miqdor": miqdor})
+        st.success(f"Qo'shildi: O'lcham {olcham}, Miqdor {miqdor}")
+
+# O'lcham/miqdorlar ro'yxatini tozalash (formadan tashqarida)
+if st.button("O'lcham/miqdorlar ro'yxatini tozalash"):
+    st.session_state.olcham_miqdorlar = []
+    st.success("O'lcham/miqdorlar ro'yxati tozalandi")
     
-    if submitted:
-        if not mahsulot_kodi:
-            st.error("Mahsulot kodi kiritilmagan!")
-        elif not rasm_bytes:
-            st.error("Mahsulot rasmi yuklanmagan!")
-        elif not mahsulot_rangi:
-            st.error("Mahsulot rangi tanlanmagan!")
-        elif not st.session_state.olcham_miqdorlar:
-            st.error("Kamida bitta o'lcham va miqdor kiritilishi kerak!")
-        else:
-            # Rasm faylini base64 formatiga o'tkazish
-            encoded_image = encode_image(rasm_bytes)
-            
-            # O'lchamlar va miqdorlarni formatlashtirish
-            olcham_miqdor_text = ", ".join([f"{item['olcham']}-{item['miqdor']}ta" for item in st.session_state.olcham_miqdorlar])
-            
-            # Ma'lumotlarni sessiyaga saqlash
-            st.session_state.current_data["mahsulot_rasmi"].append(encoded_image)
-            st.session_state.current_data["mahsulot_kodi"].append(mahsulot_kodi)
-            st.session_state.current_data["mahsulot_rangi"].append(mahsulot_rangi)
-            st.session_state.current_data["olcham_miqdori"].append(olcham_miqdor_text)
-            
-            # O'lcham/miqdorlar ro'yxatini tozalash
-            st.session_state.olcham_miqdorlar = []
-            
-            st.success(f"Mahsulot ma'lumotlari muvaffaqiyatli kiritildi: {mahsulot_kodi} - {mahsulot_rangi}")
+if submitted:
+    if not mahsulot_kodi:
+        st.error("Mahsulot kodi kiritilmagan!")
+    elif not rasm_bytes:
+        st.error("Mahsulot rasmi yuklanmagan!")
+    elif not mahsulot_rangi:
+        st.error("Mahsulot rangi tanlanmagan!")
+    elif not st.session_state.olcham_miqdorlar:
+        st.error("Kamida bitta o'lcham va miqdor kiritilishi kerak!")
+    else:
+        # Rasm faylini base64 formatiga o'tkazish
+        encoded_image = encode_image(rasm_bytes)
+        
+        # O'lchamlar va miqdorlarni formatlashtirish
+        olcham_miqdor_text = ", ".join([f"{item['olcham']}-{item['miqdor']}ta" for item in st.session_state.olcham_miqdorlar])
+        
+        # Ma'lumotlarni sessiyaga saqlash
+        st.session_state.current_data["mahsulot_rasmi"].append(encoded_image)
+        st.session_state.current_data["mahsulot_kodi"].append(mahsulot_kodi)
+        st.session_state.current_data["mahsulot_rangi"].append(mahsulot_rangi)
+        st.session_state.current_data["olcham_miqdori"].append(olcham_miqdor_text)
+        
+        # O'lcham/miqdorlar ro'yxatini tozalash
+        st.session_state.olcham_miqdorlar = []
+        
+        st.success(f"Mahsulot ma'lumotlari muvaffaqiyatli kiritildi: {mahsulot_kodi} - {mahsulot_rangi}")
 
 # Ma'lumotlarni Excelga yuklash qismi
 st.header("Ma'lumotlarni Excel fayliga yuklash")
@@ -148,9 +144,12 @@ if len(st.session_state.current_data["mahsulot_kodi"]) > 0:
                 f"**O'lchamlar:** {st.session_state.current_data['olcham_miqdori'][i]}")
         
         # Rasm ko'rsatish
-        image_data = base64.b64decode(st.session_state.current_data["mahsulot_rasmi"][i])
-        img = Image.open(BytesIO(image_data))
-        st.image(img, width=150, caption=f"Mahsulot rasmi: {st.session_state.current_data['mahsulot_kodi'][i]}")
+        try:
+            image_data = base64.b64decode(st.session_state.current_data["mahsulot_rasmi"][i])
+            img = Image.open(BytesIO(image_data))
+            st.image(img, width=150, caption=f"Mahsulot rasmi: {st.session_state.current_data['mahsulot_kodi'][i]}")
+        except Exception as e:
+            st.error(f"Rasmni ko'rsatishda xatolik: {e}")
     
     # Excel faylini yuklash tugmasi
     if st.button("Ma'lumotlarni Excel fayliga yuklash"):
@@ -196,7 +195,7 @@ else:
 
 # Qo'shimcha funksionallik: Mavjud Excel faylini yuklash
 st.header("Mavjud Excel faylini o'qish (ixtiyoriy)")
-uploaded_excel = st.file_uploader("Excel faylini yuklang", type=["xlsx", "xls"])
+uploaded_excel = st.file_uploader("Excel faylini yuklang", type=["xlsx", "xls"], key="upload_excel")
 
 if uploaded_excel is not None:
     try:
