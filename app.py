@@ -18,9 +18,6 @@ ranglar = [
     "Kamalak", "Elektrik", "Smalt", "Oliv", "Karamel", "Neytral", "Jasmin", "Krem", "Antik", "Metallik"
 ]
 
-# O'lchamlar ro'yxati
-olchamlar = [str(i) for i in range(35, 51)]
-
 # Asosiy funktsiyalar
 def save_to_excel(data, file_name="mahsulot_malumotlari.xlsx"):
     """Ma'lumotlarni Excel fayliga saqlaydi"""
@@ -39,9 +36,9 @@ def save_to_excel(data, file_name="mahsulot_malumotlari.xlsx"):
         st.error(f"Xatolik yuz berdi: {e}")
         return False
 
-def encode_image(uploaded_file):
-    """Rasm faylini base64 formatiga o'giradi"""
-    return base64.b64encode(uploaded_file.getvalue()).decode()
+def encode_image(img_bytes):
+    """Rasm baytlarini base64 formatiga o'giradi"""
+    return base64.b64encode(img_bytes).decode()
 
 # Streamlit dasturi bosh qismi
 st.title("Bozor ma'lumotlarini kiritish va Excel fayliga yuklash")
@@ -55,28 +52,58 @@ if 'current_data' not in st.session_state:
         "olcham_miqdori": []
     }
 
+if 'olcham_miqdorlar' not in st.session_state:
+    st.session_state.olcham_miqdorlar = []
+
+# Rasm olish usulini tanlash
+rasm_usuli = st.radio("Mahsulot rasmini olish usulini tanlang:", ["Fayl yuklash", "Kamera orqali olish"])
+
 # Ma'lumotlarni kiritish formasi
 with st.form("mahsulot_form"):
     # Mahsulot kodi
     mahsulot_kodi = st.text_input("Mahsulot kodi", key="kod")
     
-    # Mahsulot rasmi yuklash
-    mahsulot_rasmi = st.file_uploader("Mahsulot rasmini yuklang", type=["jpg", "jpeg", "png"], key="rasm")
+    # Mahsulot rasmini yuklash / kamera orqali olish
+    if rasm_usuli == "Fayl yuklash":
+        mahsulot_rasmi = st.file_uploader("Mahsulot rasmini yuklang", type=["jpg", "jpeg", "png"], key="rasm")
+        rasm_bytes = mahsulot_rasmi.getvalue() if mahsulot_rasmi else None
+    else:
+        kamera_joylashuvi = st.camera_input("Mahsulot rasmini kamera orqali oling")
+        rasm_bytes = kamera_joylashuvi.getvalue() if kamera_joylashuvi else None
     
     # Mahsulot rangini tanlash
     mahsulot_rangi = st.selectbox("Mahsulot rangini tanlang", ranglar, key="rang")
     
-    # O'lcham va miqdorlarni kiritish
-    st.subheader(f"O'lcham va miqdorlarni kiriting")
+    # O'lcham va miqdorlarni qo'lda kiritish
+    st.subheader("O'lcham va miqdorlarni qo'lda kiriting")
     
-    olcham_miqdorlar = {}
-    cols = st.columns(5)
-    for i, olcham in enumerate(olchamlar):
-        col_idx = i % 5
-        with cols[col_idx]:
-            miqdor = st.number_input(f"{olcham}", min_value=0, key=f"olcham_{olcham}")
-            if miqdor > 0:
-                olcham_miqdorlar[olcham] = miqdor
+    # O'lcham va miqdorlarni dinamik qo'shish
+    olcham_miqdorlar = []
+    
+    # Yangi o'lcham va miqdor qo'shish
+    col1, col2 = st.columns(2)
+    with col1:
+        olcham = st.text_input("O'lcham")
+    with col2:
+        miqdor = st.number_input("Miqdor", min_value=0)
+    
+    if st.button("O'lcham/miqdorni qo'shish", key="add_size"):
+        if olcham and miqdor > 0:
+            st.session_state.olcham_miqdorlar.append({"olcham": olcham, "miqdor": miqdor})
+            st.success(f"Qo'shildi: O'lcham {olcham}, Miqdor {miqdor}")
+        else:
+            st.warning("O'lcham kiriting va miqdor 0 dan katta bo'lishi kerak!")
+    
+    # Joriy o'lcham/miqdorlarni ko'rsatish
+    if st.session_state.olcham_miqdorlar:
+        st.write("Joriy o'lcham va miqdorlar:")
+        for i, item in enumerate(st.session_state.olcham_miqdorlar):
+            st.write(f"{i+1}. O'lcham: {item['olcham']}, Miqdor: {item['miqdor']}ta")
+    
+    # O'lcham/miqdorlar ro'yxatini tozalash
+    if st.button("O'lcham/miqdorlar ro'yxatini tozalash", key="clear_sizes"):
+        st.session_state.olcham_miqdorlar = []
+        st.success("O'lcham/miqdorlar ro'yxati tozalandi")
     
     # Yuborish tugmasi
     submitted = st.form_submit_button("Saqlash")
@@ -84,24 +111,27 @@ with st.form("mahsulot_form"):
     if submitted:
         if not mahsulot_kodi:
             st.error("Mahsulot kodi kiritilmagan!")
-        elif not mahsulot_rasmi:
+        elif not rasm_bytes:
             st.error("Mahsulot rasmi yuklanmagan!")
         elif not mahsulot_rangi:
             st.error("Mahsulot rangi tanlanmagan!")
-        elif not olcham_miqdorlar:
+        elif not st.session_state.olcham_miqdorlar:
             st.error("Kamida bitta o'lcham va miqdor kiritilishi kerak!")
         else:
             # Rasm faylini base64 formatiga o'tkazish
-            encoded_image = encode_image(mahsulot_rasmi)
+            encoded_image = encode_image(rasm_bytes)
             
             # O'lchamlar va miqdorlarni formatlashtirish
-            olcham_miqdor_text = ", ".join([f"{olcham}-{miqdor}ta" for olcham, miqdor in olcham_miqdorlar.items()])
+            olcham_miqdor_text = ", ".join([f"{item['olcham']}-{item['miqdor']}ta" for item in st.session_state.olcham_miqdorlar])
             
             # Ma'lumotlarni sessiyaga saqlash
             st.session_state.current_data["mahsulot_rasmi"].append(encoded_image)
             st.session_state.current_data["mahsulot_kodi"].append(mahsulot_kodi)
             st.session_state.current_data["mahsulot_rangi"].append(mahsulot_rangi)
             st.session_state.current_data["olcham_miqdori"].append(olcham_miqdor_text)
+            
+            # O'lcham/miqdorlar ro'yxatini tozalash
+            st.session_state.olcham_miqdorlar = []
             
             st.success(f"Mahsulot ma'lumotlari muvaffaqiyatli kiritildi: {mahsulot_kodi} - {mahsulot_rangi}")
 
